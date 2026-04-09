@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proyecto de Grado - Educación Parvularia</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1a3c34;
+    --primary-light: #2d6a5a;
+    --accent: #d4a853;
+    --accent-light: #f0d48a;
+    --bg: #f8f5f0;
+    --bg-dark: #1a3c34;
+    --card: #ffffff;
+    --text: #2c2c2c;
+    --text-light: #f8f5f0;
+    --muted: #7a7a6e;
+    --border: #e0dcd4;
+    --terracotta: #c45d3e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--bg-dark);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  h1, h2, h3, h4 { font-family: 'Playfair Display', serif; }
+
+  .slide-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateX(80px);
+    transition: opacity 0.6s cubic-bezier(.4,0,.2,1), transform 0.6s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+    padding: 60px 80px;
+  }
+
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+
+  .slide.exit-left {
+    opacity: 0;
+    transform: translateX(-80px);
+  }
+
+  /* Fondo decorativo de cada diapositiva */
+  .slide-inner {
+    width: 100%;
+    max-width: 1200px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Fondo con patrón sutil */
+  .bg-pattern {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 80%, rgba(212,168,83,0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(212,168,83,0.06) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(26,60,52,0.02) 0%, transparent 70%);
+    z-index: 1;
+  }
+
+  .bg-pattern::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4a853' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.6;
+  }
+
+  /* Barra de progreso */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    transition: width 0.4s ease;
+    z-index: 100;
+    box-shadow: 0 0 12px rgba(212,168,83,0.5);
+  }
+
+  /* Navegación */
+  .nav-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: rgba(26,60,52,0.85);
+    color: var(--accent);
+    border: 1px solid rgba(212,168,83,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 90;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+  }
+
+  .nav-btn:hover {
+    background: var(--accent);
+    color: var(--primary);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 0 20px rgba(212,168,83,0.4);
+  }
+
+  .nav-btn.prev { left: 20px; }
+  .nav-btn.next { right: 20px; }
+
+  /* Contador de diapositivas */
+  .slide-counter {
+    position: fixed;
+    bottom: 24px;
+    right: 32px;
+    color: rgba(212,168,83,0.7);
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 90;
+    letter-spacing: 1px;
+  }
+
+  /* Mini mapa de diapositivas */
+  .slide-map {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 90;
+    padding: 8px 16px;
+    background: rgba(26,60,52,0.6);
+    border-radius: 24px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(212,168,83,0.15);
+  }
+
+  .slide-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(212,168,83,0.25);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .slide-dot.active {
+    background: var(--accent);
+    width: 24px;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(212,168,83,0.5);
+  }
+
+  .slide-dot:hover:not(.active) {
+    background: rgba(212,168,83,0.5);
+  }
+
+  /* Tarjetas */
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  }
+
+  .card-accent {
+    border-left: 4px solid var(--accent);
+  }
+
+  .card-primary {
+    border-left: 4px solid var(--primary);
+  }
+
+  .card-terracotta {
+    border-left: 4px solid var(--terracotta);
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .badge-gold {
+    background: rgba(212,168,83,0.15);
+    color: #8a6d2b;
+  }
+
+  .badge-green {
+    background: rgba(26,60,52,0.12);
+    color: var(--primary);
+  }
+
+  .badge-red {
+    background: rgba(196,93,62,0.12);
+    color: var(--terracotta);
+  }
+
+  /* Separador decorativo */
+  .divider {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    border-radius: 2px;
+    margin: 12px 0;
+  }
+
+  /* Animación de entrada para elementos dentro de la diapositiva activa */
+  .slide.active .animate-in {
+    animation: fadeUp 0.5s ease forwards;
+  }
+
+  .slide.active .animate-in:nth-child(1) { animation-delay: 0.1s; }
+  .slide.active .animate-in:nth-child(2) { animation-delay: 0.2s; }
+  .slide.active .animate-in:nth-child(3) { animation-delay: 0.3s; }
+  .slide.active .animate-in:nth-child(4) { animation-delay: 0.4s; }
+  .slide.active .animate-in:nth-child(5) { animation-delay: 0.5s; }
+  .slide.active .animate-in:nth-child(6) { animation-delay: 0.6s; }
+  .slide.active .animate-in:nth-child(7) { animation-delay: 0.7s; }
+  .slide.active .animate-in:nth-child(8) { animation-delay: 0.8s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-in {
+    opacity: 0;
+  }
+
+  /* Diapositiva de portada especial */
+  .slide-cover {
+    background: linear-gradient(135deg, var(--primary) 0%, #0f2620 50%, #1a3c34 100%);
+  }
+
+  .slide-cover .bg-pattern::before {
+    background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4a853' fill-opacity='0.06'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM10 10c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S0 25.523 0 20s4.477-10 10-10zm10 8c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm40 40c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* Diapositiva de cierre */
+  .slide-end {
+    background: linear-gradient(135deg, var(--primary) 0%, #0f2620 100%);
+  }
+
+  /* FODA visual */
+  .foda-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .foda-cell {
+    padding: 16px;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .foda-cell h4 {
+    font-size: 14px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .foda-cell p {
+    font-size: 13px;
+    opacity: 0.85;
+    line-height: 1.4;
+  }
+
+  .foda-f { background: rgba(26,60,52,0.1); color: var(--primary); border: 1px solid rgba(26,60,52,0.2); }
+  .foda-o { background: rgba(212,168,83,0.1); color: #8a6d2b; border: 1px solid rgba(212,168,83,0.2); }
+  .foda-d { background: rgba(196,93,62,0.08); color: var(--terracotta); border: 1px solid rgba(196,93,62,0.15); }
+  .foda-a { background: rgba(100,100,100,0.06); color: #555; border: 1px solid rgba(100,100,100,0.15); }
+
+  /* Línea de tiempo vertical */
+  .timeline {
+    position: relative;
+    padding-left: 28px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent), var(--primary-light));
+    border-radius: 2px;
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 6px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--card);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  /* Scroll interno para diapositivas con mucho contenido */
+  .slide-scroll {
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    padding-right: 12px;
+  }
+
+  .slide-scroll::-webkit-scrollbar { width: 4px; }
+  .slide-scroll::-webkit-scrollbar-track { background: transparent; }
+  .slide-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+
+  /* Grid de columnas */
+  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .cols-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+
+  /* Enfoque cards */
+  .enfoque-card {
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .enfoque-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+  }
+
+  .enfoque-cualitativo {
+    background: rgba(196,93,62,0.06);
+    border: 1px solid rgba(196,93,62,0.15);
+  }
+  .enfoque-cualitativo::before { background: var(--terracotta); }
+
+  .enfoque-cuantitativo {
+    background: rgba(26,60,52,0.06);
+    border: 1px solid rgba(26,60,52,0.15);
+  }
+  .enfoque-cuantitativo::before { background: var(--primary); }
+
+  .enfoque-mixto {
+    background: rgba(212,168,83,0.08);
+    border: 1px solid rgba(212,168,83,0.2);
+  }
+  .enfoque-mixto::before { background: var(--accent); }
+
+  /* Ícono circular */
+  .icon-circle {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Tooltip teclado */
+  .key-hint {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(212,168,83,0.4);
+    font-size: 12px;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .key-hint kbd {
+    background: rgba(212,168,83,0.15);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    border: 1px solid rgba(212,168,83,0.2);
+    font-family: inherit;
+  }
+
+  /* Lista estilizada */
+  .styled-list li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 8px;
+    line-height: 1.5;
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  .styled-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  /* Animación flotante para la portada */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .float-anim {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(212,168,83,0.2); }
+    50% { box-shadow: 0 0 40px rgba(212,168,83,0.4); }
+  }
+
+  /* Número de sección grande */
+  .section-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 120px;
+    font-weight: 900;
+    line-height: 1;
+    color: rgba(26,60,52,0.04);
+    position: absolute;
+    right: 0;
+    top: -20px;
+    user-select: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .slide { padding: 40px 24px; }
+    .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr; }
+    .foda-grid { grid-template-columns: 1fr; }
+    .nav-btn { width: 38px; height: 38px; }
+    .nav-btn.prev { left: 8px; }
+    .nav-btn.next { right: 8px; }
+    .section-number { font-size: 72px; }
+    .slide-map { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: opacity 0.3s ease; transform: none !important; }
+    .slide.active { transform: none !important; }
+    .slide.exit-left { transform: none !important; }
+    .float-anim { animation: none; }
+    .animate-in { opacity: 1; animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Barra de progreso -->
+<div class="progress-bar" id="progressBar" style="width: 0%"></div>
+
+<!-- Botones de navegación -->
+<button class="nav-btn prev" onclick="changeSlide(-1)" aria-label="Diapositiva anterior">
+  <i class="fas fa-chevron-left"></i>
+</button>
+<button class="nav-btn next" onclick="changeSlide(1)" aria-label="Siguiente diapositiva">
+  <i class="fas fa-chevron-right"></i>
+</button>
+
+<!-- Contador -->
+<div class="slide-counter" id="slideCounter">01 / 28</div>
+
+<!-- Mini mapa -->
+<div class="slide-map" id="slideMap"></div>
+
+<!-- Hint de teclado -->
+<div class="key-hint">
+  <kbd>&larr;</kbd> <kbd>&rarr;</kbd> Navegar
+</div>
+
+<!-- Contenedor de diapositivas -->
+<div class="slide-container" id="slideContainer">
+
+  <!-- ==================== DIAPOSITIVA 1: PORTADA ==================== -->
+  <div class="slide slide-cover" data-slide="0">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner text-center" style="color: var(--text-light);">
+      <div class="animate-in float-anim" style="margin-bottom: 24px;">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#b8912e);display:inline-flex;align-items:center;justify-content:center;animation:pulse-glow 3s ease infinite;">
+          <i class="fas fa-graduation-cap" style="font-size:36px;color:var(--primary);"></i>
+        </div>
+      </div>
+      <div class="animate-in" style="margin-bottom:8px;">
+        <span class="badge" style="background:rgba(212,168,83,0.2);color:var(--accent);font-size:13px;letter-spacing:2px;">Trabajo Grupal</span>
+      </div>
+      <h1 class="animate-in" style="font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.15;margin-bottom:16px;">
+        Proyecto de Grado
+      </h1>
+      <div class="animate-in" style="width:80px;height:3px;background:var(--accent);margin:0 auto 20px;border-radius:2px;"></div>
+      <p class="animate-in" style="font-size:18px;opacity:0.8;margin-bottom:6px;font-weight:300;">Universidad Pública de El Alto</p>
+      <p class="animate-in" style="font-size:15px;opacity:0.6;margin-bottom:24px;">Facultad de Ciencias de la Educación — Carrera de Educación Parvularia</p>
+      <p class="animate-in" style="font-size:14px;opacity:0.5;">Modalidades de Graduación (Técnico Universitario Superior)</p>
+      <p class="animate-in" style="font-size:14px;opacity:0.5;margin-top:4px;">Docente: Lic. Grover Jiménez Sánchez</p>
+      <p class="animate-in" style="font-size:13px;opacity:0.4;margin-top:16px;">La Paz – Bolivia &middot; 2026</p>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 2: INTEGRANTES ==================== -->
+  <div class="slide" data-slide="1" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner">
+      <div class="animate-in"><span class="badge badge-gold">Equipo de trabajo</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Integrantes del Grupo</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-3" style="margin-top:20px;">
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Acarapi López</strong> Wara Celeste</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Alanoca Flores</strong> Marylin</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Calle Quispe</strong> Gabriela Rene</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Condo Choque</strong> María Valeria</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Cutipa López</strong> Lizbeth Vanessa</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Quispe Velasco</strong> Aracely Erika</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Rengel Blanco</strong> Shonlyn Kensy</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Tipula Ludeña</strong> Carolina</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Turpo Quispe</strong> Esmeralda Guadalupe</p></div>
+        <div class="card" style="padding:12px 16px;"><p style="font-size:14px;color:var(--text);"><strong>Vino Challco</strong> Silvia Marisol</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 3: ÍNDICE ==================== -->
+  <div class="slide" data-slide="2" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner">
+      <div class="animate-in"><span class="badge badge-green">Contenido</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Índice de la Presentación</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in slide-scroll" style="margin-top:16px;">
+        <div class="cols-2">
+          <div class="card card-accent" style="padding:16px;margin-bottom:12px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;"><i class="fas fa-book-open" style="color:var(--accent);margin-right:8px;"></i>1. Definiciones</h4>
+            <p style="font-size:13px;color:var(--muted);">Proyecto, proyecto de grado, elaboración, características e importancia.</p>
+          </div>
+          <div class="card card-accent" style="padding:16px;margin-bottom:12px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;"><i class="fas fa-sync-alt" style="color:var(--accent);margin-right:8px;"></i>2. Ciclo de Vida</h4>
+            <p style="font-size:13px;color:var(--muted);">Fases desde el inicio hasta la finalización del proyecto.</p>
+          </div>
+          <div class="card card-primary" style="padding:16px;margin-bottom:12px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;"><i class="fas fa-stethoscope" style="color:var(--primary-light);margin-right:8px;"></i>3. Etapa: Diagnóstico</h4>
+            <p style="font-size:13px;color:var(--muted);">Técnicas, instrumentos, FODA, árbol de problemas y objetivos.</p>
+          </div>
+          <div class="card card-primary" style="padding:16px;margin-bottom:12px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;"><i class="fas fa-layer-group" style="color:var(--primary-light);margin-right:8px;"></i>4. Estructura</h4>
+            <p style="font-size:13px;color:var(--muted);">Título, portada, introducción, justificación, objetivos, marcos.</p>
+          </div>
+          <div class="card card-terracotta" style="padding:16px;margin-bottom:12px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;"><i class="fas fa-flask" style="color:var(--terracotta);margin-right:8px;"></i>5. Diseño Metodológico</h4>
+            <p style="font-size:13px;color:var(--muted);">Metodología, métodos, enfoques de investigación.</p>
+          </div>
+          <div class="card card-terracotta" style="padding:16px;margin-bottom:12px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;"><i class="fas fa-flag-checkered" style="color:var(--terracotta);margin-right:8px;"></i>6. Cierre</h4>
+            <p style="font-size:13px;color:var(--muted);">Conclusiones, recomendaciones, bibliografía y anexos.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 4: ¿QUÉ ES UN PROYECTO? ==================== -->
+  <div class="slide" data-slide="3" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">01</div>
+      <div class="animate-in"><span class="badge badge-gold">Sección 1</span></div>
+      <h2 class="animate-in" style="font-size:34px;font-weight:700;color:var(--primary);margin:8px 0 4px;">¿Qué es un Proyecto?</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card card-accent">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div class="icon-circle" style="background:rgba(212,168,83,0.12);color:var(--accent);"><i class="fas fa-user-tie"></i></div>
+            <h4 style="font-size:15px;color:var(--primary);">Gabriel Baca Urbina</h4>
+          </div>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Un conjunto de <strong>actividades planificadas y organizadas</strong> para lograr un objetivo y resolver un problema en un tiempo determinado.</p>
+        </div>
+        <div class="card card-primary">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div class="icon-circle" style="background:rgba(26,60,52,0.1);color:var(--primary);"><i class="fas fa-user-tie"></i></div>
+            <h4 style="font-size:15px;color:var(--primary);">Nassir Sapag Chain</h4>
+          </div>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Una propuesta donde se utilizan <strong>recursos para producir un bien, un servicio</strong> o dar solución a una necesidad.</p>
+        </div>
+      </div>
+      <div class="animate-in card" style="margin-top:20px;background:linear-gradient(135deg,var(--primary),var(--primary-light));border:none;color:var(--text-light);padding:20px 28px;">
+        <p style="font-size:16px;font-weight:500;"><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:10px;"></i>En síntesis: Un proyecto es un <strong>plan</strong> que se hace para lograr algo o solucionar un problema.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 5: ¿QUÉ ES UN PROYECTO DE GRADO? ==================== -->
+  <div class="slide" data-slide="4" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">01</div>
+      <div class="animate-in"><span class="badge badge-gold">Sección 1</span></div>
+      <h2 class="animate-in" style="font-size:34px;font-weight:700;color:var(--primary);margin:8px 0 4px;">¿Qué es un Proyecto de Grado?</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card card-accent">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div class="icon-circle" style="background:rgba(212,168,83,0.12);color:var(--accent);"><i class="fas fa-user-tie"></i></div>
+            <h4 style="font-size:15px;color:var(--primary);">Roberto Hernández Sampieri</h4>
+          </div>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Un trabajo de investigación que realiza el estudiante para <strong>resolver un problema relacionado con su carrera</strong>.</p>
+        </div>
+        <div class="card card-primary">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div class="icon-circle" style="background:rgba(26,60,52,0.1);color:var(--primary);"><i class="fas fa-user-tie"></i></div>
+            <h4 style="font-size:15px;color:var(--primary);">Carlos Sabino</h4>
+          </div>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Un documento donde se explica <strong>qué se va a investigar, cómo y para qué</strong> se va a investigar.</p>
+        </div>
+      </div>
+      <div class="animate-in card" style="margin-top:20px;background:linear-gradient(135deg,var(--primary),var(--primary-light));border:none;color:var(--text-light);padding:20px 28px;">
+        <p style="font-size:16px;font-weight:500;"><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:10px;"></i>En síntesis: Es una investigación que hace el estudiante para <strong>obtener su título</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 6: ELABORACIÓN ==================== -->
+  <div class="slide" data-slide="5" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">01</div>
+      <div class="animate-in"><span class="badge badge-gold">Sección 1</span></div>
+      <h2 class="animate-in" style="font-size:34px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Elaboración de un Proyecto de Grado</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card card-accent">
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:8px;"><i class="fas fa-user-tie" style="color:var(--accent);margin-right:8px;"></i>Fidias G. Arias</h4>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Consiste en organizar y planificar: problema, objetivos, justificación, marco teórico, metodología, cronograma y presupuesto.</p>
+        </div>
+        <div class="card card-primary">
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:8px;"><i class="fas fa-user-tie" style="color:var(--primary-light);margin-right:8px;"></i>Mario Tamayo</h4>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Ordenar paso a paso todo lo que se va a hacer en la investigación <strong>antes de comenzar</strong>.</p>
+        </div>
+      </div>
+      <div class="animate-in" style="margin-top:24px;">
+        <div class="card" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));border:none;color:var(--text-light);padding:20px 28px;">
+          <p style="font-size:16px;font-weight:500;"><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:10px;"></i>En síntesis: <strong>Planificar toda la investigación antes de realizarla.</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 7: CARACTERÍSTICAS ==================== -->
+  <div class="slide" data-slide="6" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">01</div>
+      <div class="animate-in"><span class="badge badge-gold">Sección 1</span></div>
+      <h2 class="animate-in" style="font-size:34px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Características de un Proyecto de Grado</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div>
+          <h4 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Nassir Sapag Chain</h4>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-bullseye" style="color:var(--accent);font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);">Tener un <strong>objetivo</strong></span>
+            </div>
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-exclamation-triangle" style="color:var(--terracotta);font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);">Un <strong>problema</strong> que solucionar</span>
+            </div>
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-clock" style="color:var(--primary-light);font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);">Un <strong>tiempo</strong> para realizarse</span>
+            </div>
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-boxes-stacked" style="color:var(--primary);font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);"><strong>Recursos</strong> disponibles</span>
+            </div>
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-check-circle" style="color:#2d8a56;font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);">Debe ser <strong>posible</strong> de realizar</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h4 style="font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Carlos Sabino</h4>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-eye" style="color:var(--accent);font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);"><strong>Claro</strong></span>
+            </div>
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-list-ol" style="color:var(--primary-light);font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);"><strong>Ordenado</strong></span>
+            </div>
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-crosshairs" style="color:var(--terracotta);font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);"><strong>Preciso</strong></span>
+            </div>
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-globe" style="color:var(--primary);font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);"><strong>Realista</strong></span>
+            </div>
+            <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+              <i class="fas fa-microscope" style="color:#2d8a56;font-size:18px;"></i>
+              <span style="font-size:14px;color:var(--text);">Basado en una <strong>metodología</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 8: IMPORTANCIA ==================== -->
+  <div class="slide" data-slide="7" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">01</div>
+      <div class="animate-in"><span class="badge badge-gold">Sección 1</span></div>
+      <h2 class="animate-in" style="font-size:34px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Importancia de un Proyecto de Grado</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-3" style="margin-top:24px;">
+        <div class="card" style="text-align:center;padding:28px 20px;">
+          <div style="width:56px;height:56px;border-radius:50%;background:rgba(212,168,83,0.12);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;">
+            <i class="fas fa-brain" style="font-size:24px;color:var(--accent);"></i>
+          </div>
+          <h4 style="font-size:16px;color:var(--primary);margin-bottom:8px;">Aplicar lo aprendido</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Permite aplicar los conocimientos adquiridos durante la carrera (Hernández Sampieri).</p>
+        </div>
+        <div class="card" style="text-align:center;padding:28px 20px;">
+          <div style="width:56px;height:56px;border-radius:50%;background:rgba(26,60,52,0.1);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;">
+            <i class="fas fa-search" style="font-size:24px;color:var(--primary);"></i>
+          </div>
+          <h4 style="font-size:16px;color:var(--primary);margin-bottom:8px;">Desarrollar investigación</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Fomenta la capacidad investigativa y el pensamiento crítico del estudiante.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:28px 20px;">
+          <div style="width:56px;height:56px;border-radius:50%;background:rgba(196,93,62,0.1);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;">
+            <i class="fas fa-wrench" style="font-size:24px;color:var(--terracotta);"></i>
+          </div>
+          <h4 style="font-size:16px;color:var(--primary);margin-bottom:8px;">Resolver problemas</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Ayuda a resolver problemas reales y mejorar una situación (Baca Urbina).</p>
+        </div>
+      </div>
+      <div class="animate-in card" style="margin-top:20px;background:linear-gradient(135deg,var(--primary),var(--primary-light));border:none;color:var(--text-light);padding:18px 28px;">
+        <p style="font-size:15px;font-weight:500;"><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:10px;"></i>El proyecto de grado es importante porque permite <strong>investigar, aprender más y solucionar problemas</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 9: CICLO DE VIDA ==================== -->
+  <div class="slide" data-slide="8" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">02</div>
+      <div class="animate-in"><span class="badge badge-green">Sección 2</span></div>
+      <h2 class="animate-in" style="font-size:34px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Ciclo de Vida de un Proyecto de Grado</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in" style="margin-top:24px;">
+        <div class="card" style="padding:24px 28px;margin-bottom:20px;">
+          <p style="font-size:15px;color:var(--text);line-height:1.7;">Es el marco que describe cómo un proyecto <strong>progresa a través de sus fases</strong> desde su inicio hasta su finalización. Proporciona un enfoque estructurado para gestionar y organizar las diversas actividades necesarias para alcanzar los objetivos.</p>
+        </div>
+      </div>
+      <div class="animate-in cols-4" style="margin-top:8px;">
+        <div class="card" style="text-align:center;padding:20px 14px;border-top:3px solid var(--accent);">
+          <i class="fas fa-rocket" style="font-size:24px;color:var(--accent);margin-bottom:10px;"></i>
+          <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">Inicio</h4>
+          <p style="font-size:12px;color:var(--muted);">Ideación y definición del problema</p>
+        </div>
+        <div class="card" style="text-align:center;padding:20px 14px;border-top:3px solid var(--primary-light);">
+          <i class="fas fa-drafting-compass" style="font-size:24px;color:var(--primary-light);margin-bottom:10px;"></i>
+          <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">Planificación</h4>
+          <p style="font-size:12px;color:var(--muted);">Diseño metodológico y cronograma</p>
+        </div>
+        <div class="card" style="text-align:center;padding:20px 14px;border-top:3px solid var(--terracotta);">
+          <i class="fas fa-cogs" style="font-size:24px;color:var(--terracotta);margin-bottom:10px;"></i>
+          <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">Ejecución</h4>
+          <p style="font-size:12px;color:var(--muted);">Recolección y análisis de datos</p>
+        </div>
+        <div class="card" style="text-align:center;padding:20px 14px;border-top:3px solid #2d8a56;">
+          <i class="fas fa-flag-checkered" style="font-size:24px;color:#2d8a56;margin-bottom:10px;"></i>
+          <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">Cierre</h4>
+          <p style="font-size:12px;color:var(--muted);">Conclusiones y presentación</p>
+        </div>
+      </div>
+      <div class="animate-in" style="margin-top:16px;display:flex;gap:16px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);"><i class="fas fa-shield-halved" style="color:var(--primary-light);"></i> Reduce riesgos</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);"><i class="fas fa-gauge-high" style="color:var(--accent);"></i> Optimiza recursos</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);"><i class="fas fa-focus" style="color:var(--terracotta);"></i> Mantiene el enfoque</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 10: DIAGNÓSTICO - QUÉ ES ==================== -->
+  <div class="slide" data-slide="9" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">03</div>
+      <div class="animate-in"><span class="badge badge-green">Sección 3 — Etapa de Diagnóstico</span></div>
+      <h2 class="animate-in" style="font-size:34px;font-weight:700;color:var(--primary);margin:8px 0 4px;">¿Qué es un Diagnóstico?</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card card-accent">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div class="icon-circle" style="background:rgba(212,168,83,0.12);color:var(--accent);"><i class="fas fa-user-tie"></i></div>
+            <h4 style="font-size:15px;color:var(--primary);">Ezequiel Ander-Egg</h4>
+          </div>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Etapa previa a la planificación donde se estudia la <strong>realidad social</strong> para detectar necesidades, problemas y recursos disponibles.</p>
+        </div>
+        <div class="card card-primary">
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:8px;"><i class="fas fa-pen-fancy" style="color:var(--primary-light);margin-right:8px;"></i>Fuente propia</h4>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Fase clave que consiste en <strong>identificar, analizar y describir</strong> una realidad o problema antes de proponer una solución, estableciendo su magnitud, causa y consecuencia.</p>
+        </div>
+      </div>
+      <div class="animate-in card" style="margin-top:20px;background:linear-gradient(135deg,var(--primary),var(--primary-light));border:none;color:var(--text-light);padding:18px 28px;">
+        <p style="font-size:15px;font-weight:500;"><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:10px;"></i>Según Mario Tamayo: Permite <strong>analizar y comprender la realidad</strong> de una situación problemática para identificar causas, necesidades y orientar soluciones.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 11: PASOS DEL DIAGNÓSTICO ==================== -->
+  <div class="slide" data-slide="10" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">03</div>
+      <div class="animate-in"><span class="badge badge-green">Diagnóstico</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Pasos para Realizar un Diagnóstico</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in" style="margin-top:20px;">
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="card" style="padding:14px 18px;">
+              <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">1. Identificación del problema</h4>
+              <p style="font-size:13px;color:var(--muted);">Reconocer y definir claramente la situación problemática a estudiar.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="card" style="padding:14px 18px;">
+              <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">2. Delimitación del contexto</h4>
+              <p style="font-size:13px;color:var(--muted);">Precisar lugar, tiempo y población donde se presenta el problema.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="card" style="padding:14px 18px;">
+              <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">3. Recolección de información</h4>
+              <p style="font-size:13px;color:var(--muted);">Obtener datos mediante observación, encuestas, entrevistas o revisión documental.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="card" style="padding:14px 18px;">
+              <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">4. Análisis e interpretación</h4>
+              <p style="font-size:13px;color:var(--muted);">Examinar datos para comprender causas, características y consecuencias.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="card" style="padding:14px 18px;">
+              <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">5. Determinación de necesidades</h4>
+              <p style="font-size:13px;color:var(--muted);">Identificar qué aspectos requieren intervención o solución.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="card" style="padding:14px 18px;">
+              <h4 style="font-size:14px;color:var(--primary);margin-bottom:4px;">6. Formulación del diagnóstico</h4>
+              <p style="font-size:13px;color:var(--muted);">Redactar síntesis clara que describa la situación real encontrada.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 12: HERRAMIENTAS DEL DIAGNÓSTICO ==================== -->
+  <div class="slide" data-slide="11" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">03</div>
+      <div class="animate-in"><span class="badge badge-green">Diagnóstico</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Herramientas de un Diagnóstico</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-3" style="margin-top:20px;">
+        <div class="card" style="text-align:center;padding:22px 16px;">
+          <i class="fas fa-eye" style="font-size:28px;color:var(--accent);margin-bottom:12px;"></i>
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;">Observación</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Examinar directamente la situación en su contexto real.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:22px 16px;">
+          <i class="fas fa-comments" style="font-size:28px;color:var(--primary-light);margin-bottom:12px;"></i>
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;">Entrevista</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Recoger información detallada a través del diálogo.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:22px 16px;">
+          <i class="fas fa-clipboard-list" style="font-size:28px;color:var(--terracotta);margin-bottom:12px;"></i>
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;">Encuesta</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Obtener datos de un grupo amplio mediante cuestionarios.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:22px 16px;">
+          <i class="fas fa-book" style="font-size:28px;color:var(--accent);margin-bottom:12px;"></i>
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;">Revisión documental</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Analizar libros, informes e investigaciones previas.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:22px 16px;">
+          <i class="fas fa-file-alt" style="font-size:28px;color:var(--primary-light);margin-bottom:12px;"></i>
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;">Cuestionario</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Instrumento escrito para recolección sistemática de datos.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:22px 16px;">
+          <i class="fas fa-pen-to-square" style="font-size:28px;color:var(--terracotta);margin-bottom:12px;"></i>
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:6px;">Registros de campo</h4>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Organizar y sistematizar la información obtenida.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 13: TÉCNICAS E INSTRUMENTOS ==================== -->
+  <div class="slide" data-slide="12" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">03</div>
+      <div class="animate-in"><span class="badge badge-green">Diagnóstico — Métodos</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Técnicas e Instrumentos</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card card-accent" style="padding:24px;">
+          <h3 style="font-size:18px;color:var(--primary);margin-bottom:6px;">Técnicas</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-style:italic;">"Recursos metodológicos que permiten obtener datos válidos y confiables" — Hernández Sampieri (2018)</p>
+          <ul class="styled-list" style="list-style:none;">
+            <li><strong>Observación</strong> — Analizar el contexto real</li>
+            <li><strong>Entrevista</strong> — Información directa</li>
+            <li><strong>Encuesta</strong> — Datos cuantificables</li>
+            <li><strong>Revisión documental</strong> — Antecedentes teóricos</li>
+          </ul>
+        </div>
+        <div class="card card-primary" style="padding:24px;">
+          <h3 style="font-size:18px;color:var(--primary);margin-bottom:6px;">Instrumentos</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-style:italic;">"Medios estructurados que permiten recolectar información de manera organizada" — Bernal (2016)</p>
+          <ul class="styled-list" style="list-style:none;">
+            <li>Cuestionarios (para encuestas)</li>
+            <li>Guías de entrevista</li>
+            <li>Listas de cotejo</li>
+            <li>Diarios de campo</li>
+          </ul>
+          <div style="margin-top:14px;padding:10px 14px;background:rgba(212,168,83,0.08);border-radius:8px;">
+            <p style="font-size:13px;color:var(--text);"><i class="fas fa-check-circle" style="color:var(--accent);margin-right:6px;"></i>Deben ser <strong>válidos</strong> (miden lo que deben medir) y <strong>confiables</strong> (resultados consistentes).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 14: ANÁLISIS FODA ==================== -->
+  <div class="slide" data-slide="13" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">03</div>
+      <div class="animate-in"><span class="badge badge-green">Diagnóstico — Análisis FODA</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Análisis FODA</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in" style="margin-top:6px;">
+        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;font-style:italic;">"Permite evaluar factores internos y externos que influyen en una organización o situación" — David (2020)</p>
+      </div>
+      <div class="animate-in foda-grid" style="max-width:600px;margin:0 auto;">
+        <div class="foda-cell foda-f">
+          <h4><i class="fas fa-shield-halved" style="margin-right:6px;"></i>Fortalezas</h4>
+          <p>Aspectos internos positivos</p>
+        </div>
+        <div class="foda-cell foda-o">
+          <h4><i class="fas fa-door-open" style="margin-right:6px;"></i>Oportunidades</h4>
+          <p>Factores externos favorables</p>
+        </div>
+        <div class="foda-cell foda-d">
+          <h4><i class="fas fa-triangle-exclamation" style="margin-right:6px;"></i>Debilidades</h4>
+          <p>Aspectos internos negativos</p>
+        </div>
+        <div class="foda-cell foda-a">
+          <h4><i class="fas fa-bolt" style="margin-right:6px;"></i>Amenazas</h4>
+          <p>Factores externos desfavorables</p>
+        </div>
+      </div>
+      <div class="animate-in cols-3" style="margin-top:20px;">
+        <div class="card" style="padding:14px;text-align:center;"><p style="font-size:13px;color:var(--text);"><i class="fas fa-compass" style="color:var(--accent);margin-right:6px;"></i>Comprender el contexto</p></div>
+        <div class="card" style="padding:14px;text-align:center;"><p style="font-size:13px;color:var(--text);"><i class="fas fa-chess" style="color:var(--primary-light);margin-right:6px;"></i>Decisiones estratégicas</p></div>
+        <div class="card" style="padding:14px;text-align:center;"><p style="font-size:13px;color:var(--text);"><i class="fas fa-check-double" style="color:var(--terracotta);margin-right:6px;"></i>Justificar el proyecto</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 15: ÁRBOL DE PROBLEMAS ==================== -->
+  <div class="slide" data-slide="14" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">03</div>
+      <div class="animate-in"><span class="badge badge-green">Diagnóstico — Análisis de Problemas</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Árbol de Problemas</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in" style="margin-top:16px;text-align:center;">
+        <div style="max-width:500px;margin:0 auto;">
+          <!-- Efectos -->
+          <div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px;">
+            <div class="card" style="padding:12px 16px;border-top:2px solid var(--terracotta);flex:1;">
+              <p style="font-size:12px;color:var(--terracotta);font-weight:600;margin-bottom:2px;">EFECTO 1</p>
+              <p style="font-size:13px;color:var(--text);">Consecuencia directa</p>
+            </div>
+            <div class="card" style="padding:12px 16px;border-top:2px solid var(--terracotta);flex:1;">
+              <p style="font-size:12px;color:var(--terracotta);font-weight:600;margin-bottom:2px;">EFECTO 2</p>
+              <p style="font-size:13px;color:var(--text);">Consecuencia directa</p>
+            </div>
+          </div>
+          <!-- Flecha -->
+          <div style="color:var(--muted);font-size:20px;margin:4px 0;"><i class="fas fa-arrow-up"></i> EFECTOS</div>
+          <!-- Problema central -->
+          <div class="card" style="padding:18px 24px;background:var(--terracotta);border:none;margin:8px 0;">
+            <p style="font-size:12px;color:rgba(255,255,255,0.8);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Problema Central</p>
+            <p style="font-size:15px;color:#fff;font-weight:600;">Situación negativa identificada</p>
+          </div>
+          <!-- Flecha -->
+          <div style="color:var(--muted);font-size:20px;margin:4px 0;">CAUSAS <i class="fas fa-arrow-down"></i></div>
+          <!-- Causas -->
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:12px;">
+            <div class="card" style="padding:12px 16px;border-bottom:2px solid var(--primary);flex:1;">
+              <p style="font-size:12px;color:var(--primary);font-weight:600;margin-bottom:2px;">CAUSA 1</p>
+              <p style="font-size:13px;color:var(--text);">Causa directa</p>
+            </div>
+            <div class="card" style="padding:12px 16px;border-bottom:2px solid var(--primary);flex:1;">
+              <p style="font-size:12px;color:var(--primary);font-weight:600;margin-bottom:2px;">CAUSA 2</p>
+              <p style="font-size:13px;color:var(--text);">Causa directa</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="animate-in cols-3" style="margin-top:20px;">
+        <div class="card" style="padding:12px;text-align:center;"><p style="font-size:13px;color:var(--text);"><i class="fas fa-crosshairs" style="color:var(--terracotta);margin-right:6px;"></i>Define el problema</p></div>
+        <div class="card" style="padding:12px;text-align:center;"><p style="font-size:13px;color:var(--text);"><i class="fas fa-ban" style="color:var(--primary);margin-right:6px;"></i>Evita soluciones incorrectas</p></div>
+        <div class="card" style="padding:12px;text-align:center;"><p style="font-size:13px;color:var(--text);"><i class="fas fa-check" style="color:var(--accent);margin-right:6px;"></i>Justifica el proyecto</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 16: ÁRBOL DE OBJETIVOS ==================== -->
+  <div class="slide" data-slide="15" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">03</div>
+      <div class="animate-in"><span class="badge badge-green">Diagnóstico — Análisis de Objetivos</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Árbol de Objetivos</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in" style="margin-top:12px;">
+        <div class="card" style="padding:18px 24px;margin-bottom:16px;background:rgba(45,138,86,0.06);border:1px solid rgba(45,138,86,0.15);">
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Transformación del <strong>árbol de problemas</strong> en soluciones deseadas. Convierte las situaciones negativas en positivas (CEPAL, 2020).</p>
+        </div>
+      </div>
+      <div class="animate-in cols-3" style="margin-top:8px;">
+        <div class="card card-accent" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <i class="fas fa-exchange-alt" style="color:var(--accent);font-size:20px;"></i>
+            <h4 style="font-size:15px;color:var(--primary);">Problema → Objetivo</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">El problema central se convierte en el <strong>objetivo general</strong>.</p>
+        </div>
+        <div class="card card-primary" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <i class="fas fa-sitemap" style="color:var(--primary-light);font-size:20px;"></i>
+            <h4 style="font-size:15px;color:var(--primary);">Causas → Específicos</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Las causas se convierten en <strong>objetivos específicos</strong>.</p>
+        </div>
+        <div class="card card-terracotta" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <i class="fas fa-trophy" style="color:var(--terracotta);font-size:20px;"></i>
+            <h4 style="font-size:15px;color:var(--primary);">Efectos → Resultados</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Los efectos se convierten en <strong>resultados esperados</strong>.</p>
+        </div>
+      </div>
+      <div class="animate-in cols-3" style="margin-top:16px;">
+        <div class="card" style="padding:12px;text-align:center;background:rgba(45,138,86,0.04);border:1px solid rgba(45,138,86,0.1);">
+          <p style="font-size:13px;color:var(--text);"><i class="fas fa-compass" style="color:#2d8a56;margin-right:6px;"></i>Define el rumbo</p>
+        </div>
+        <div class="card" style="padding:12px;text-align:center;background:rgba(45,138,86,0.04);border:1px solid rgba(45,138,86,0.1);">
+          <p style="font-size:13px;color:var(--text);"><i class="fas fa-tasks" style="color:#2d8a56;margin-right:6px;"></i>Planifica acciones</p>
+        </div>
+        <div class="card" style="padding:12px;text-align:center;background:rgba(45,138,86,0.04);border:1px solid rgba(45,138,86,0.1);">
+          <p style="font-size:13px;color:var(--text);"><i class="fas fa-chart-line" style="color:#2d8a56;margin-right:6px;"></i>Facilita evaluación</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 17: ESTRUCTURA GENERAL ==================== -->
+  <div class="slide" data-slide="16" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">04</div>
+      <div class="animate-in"><span class="badge badge-gold">Sección 4</span></div>
+      <h2 class="animate-in" style="font-size:34px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Estructura del Proyecto de Grado</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in slide-scroll" style="margin-top:16px;">
+        <div class="cols-3">
+          <div class="card" style="padding:16px;border-top:3px solid var(--accent);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Título</h4>
+            <p style="font-size:12px;color:var(--muted);">Claro, conciso y refleja el contenido.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid var(--accent);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Portada</h4>
+            <p style="font-size:12px;color:var(--muted);">Título, autor, institución, fecha, nivel académico.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid var(--accent);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Índice</h4>
+            <p style="font-size:12px;color:var(--muted);">Lista de contenidos con páginas.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid var(--primary-light);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Introducción</h4>
+            <p style="font-size:12px;color:var(--muted);">Presentación, objetivos, justificación, descripción.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid var(--primary-light);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Justificación</h4>
+            <p style="font-size:12px;color:var(--muted);">Importancia, relevancia y aportes del estudio.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid var(--primary-light);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Objetivos</h4>
+            <p style="font-size:12px;color:var(--muted);">General y específicos con verbos en infinitivo.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid var(--terracotta);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Marco Institucional</h4>
+            <p style="font-size:12px;color:var(--muted);">Normas, instituciones y fundamentación legal.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid var(--terracotta);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Diagnóstico</h4>
+            <p style="font-size:12px;color:var(--muted);">Situación actual, entorno, necesidades.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid var(--terracotta);">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Delimitación</h4>
+            <p style="font-size:12px;color:var(--muted);">Espacio, tiempo, población, variables.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid #2d8a56;">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Sustento Teórico</h4>
+            <p style="font-size:12px;color:var(--muted);">Teorías, conceptos y estudios previos.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid #2d8a56;">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Diseño / Metodología</h4>
+            <p style="font-size:12px;color:var(--muted);">Métodos, enfoque, población y muestra.</p>
+          </div>
+          <div class="card" style="padding:16px;border-top:3px solid #2d8a56;">
+            <h4 style="font-size:14px;color:var(--primary);margin-bottom:8px;">Conclusiones / Biblio.</h4>
+            <p style="font-size:12px;color:var(--muted);">Cierre investigativo y fuentes citadas.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 18: JUSTIFICACIÓN ==================== -->
+  <div class="slide" data-slide="17" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">04</div>
+      <div class="animate-in"><span class="badge badge-gold">Estructura — Justificación</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Tipos de Justificación</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in" style="margin-top:12px;">
+        <div class="card" style="padding:16px 20px;margin-bottom:16px;background:rgba(212,168,83,0.06);border:1px solid rgba(212,168,83,0.15);">
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">Explica la <strong>importancia y relevancia</strong> del estudio. Responde a la pregunta: <em>"¿Por qué?"</em>. Debe exponer motivos, pertinencia y posibles logros e innovaciones.</p>
+        </div>
+      </div>
+      <div class="animate-in cols-2" style="margin-top:8px;">
+        <div class="card card-accent" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <i class="fas fa-users" style="color:var(--accent);font-size:20px;"></i>
+            <h4 style="font-size:15px;color:var(--primary);">Justificación Social</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Quiénes se benefician y cómo mejora su calidad de vida.</p>
+        </div>
+        <div class="card card-primary" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <i class="fas fa-graduation-cap" style="color:var(--primary-light);font-size:20px;"></i>
+            <h4 style="font-size:15px;color:var(--primary);">Justificación Académica</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Aporte al campo del conocimiento de la carrera.</p>
+        </div>
+        <div class="card card-terracotta" style="padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <i class="fas fa-microscope" style="color:var(--terracotta);font-size:20px;"></i>
+            <h4 style="font-size:15px;color:var(--primary);">Justificación Metodológica</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Valor de los métodos, técnicas o instrumentos utilizados.</p>
+        </div>
+        <div class="card" style="padding:20px;border-left:4px solid #2d8a56;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <i class="fas fa-building-columns" style="color:#2d8a56;font-size:20px;"></i>
+            <h4 style="font-size:15px;color:var(--primary);">Justificación Institucional</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Cómo beneficia a la institución donde se aplica.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 19: OBJETIVOS ==================== -->
+  <div class="slide" data-slide="18" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">04</div>
+      <div class="animate-in"><span class="badge badge-gold">Estructura — Objetivos</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Objetivos: General y Específicos</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card card-accent" style="padding:22px;">
+          <h3 style="font-size:17px;color:var(--primary);margin-bottom:10px;">Objetivo General</h3>
+          <ul class="styled-list" style="list-style:none;">
+            <li>Solo <strong>uno</strong></li>
+            <li>Expresa el propósito central</li>
+            <li>Comienza con <strong>verbo en infinitivo</strong></li>
+            <li>Responde al problema general</li>
+          </ul>
+          <div style="margin-top:12px;padding:8px 12px;background:rgba(212,168,83,0.08);border-radius:6px;">
+            <p style="font-size:12px;color:var(--accent);font-weight:600;">Ej: Desarrollar, implementar, analizar, diseñar, evaluar...</p>
+          </div>
+        </div>
+        <div class="card card-primary" style="padding:22px;">
+          <h3 style="font-size:17px;color:var(--primary);margin-bottom:10px;">Objetivos Específicos</h3>
+          <ul class="styled-list" style="list-style:none;">
+            <li><strong>3 a 5</strong> objetivos</li>
+            <li>Pasos concretos para el general</li>
+            <li>Verbo en infinitivo <strong>medible</strong></li>
+            <li>Alcanzables en el tiempo del proyecto</li>
+          </ul>
+          <div style="margin-top:12px;padding:8px 12px;background:rgba(26,60,52,0.06);border-radius:6px;">
+            <p style="font-size:12px;color:var(--primary-light);font-weight:600;">Ej: Identificar, describir, elaborar, aplicar, validar...</p>
+          </div>
+        </div>
+      </div>
+      <div class="animate-in card" style="margin-top:16px;padding:16px 20px;">
+        <h4 style="font-size:14px;color:var(--primary);margin-bottom:6px;"><i class="fas fa-info-circle" style="color:var(--accent);margin-right:8px;"></i>¿De dónde surgen? (Mario Bunge)</h4>
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;">De la <strong>descomposición analítica</strong> del problema general. Se derivan de la hipótesis y el objetivo general, desglosando pasos lógicos, empíricos y metodológicos necesarios para abordar aspectos particulares.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 20: MARCO INSTITUCIONAL ==================== -->
+  <div class="slide" data-slide="19" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">04</div>
+      <div class="animate-in"><span class="badge badge-gold">Estructura — Marco Institucional</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Marco Institucional y Constitucional</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div>
+          <div class="card card-accent" style="padding:20px;margin-bottom:14px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:8px;">¿Qué es?</h4>
+            <p style="font-size:13px;color:var(--muted);line-height:1.6;">Describe las instituciones involucradas, sus funciones, normas y la relación con la ejecución del proyecto. Permite entender el contexto organizativo.</p>
+          </div>
+          <div class="card card-primary" style="padding:20px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:8px;">¿Para qué sirve?</h4>
+            <ul class="styled-list" style="list-style:none;">
+              <li><strong>Legitimidad y legalidad</strong> — Sustenta en la Constitución</li>
+              <li><strong>Seguridad jurídica</strong> — Certeza sobre normas vigentes</li>
+              <li><strong>Límites de actuación</strong> — Lo permitido y prohibido</li>
+              <li><strong>Fundamento normativo</strong> — Base para jerarquizar normas</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="padding:20px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:12px;">¿Cómo se desarrolla?</h4>
+            <div class="timeline">
+              <div class="timeline-item">
+                <p style="font-size:13px;color:var(--text);"><strong>Identificar normas</strong> — Constitución y tratados</p>
+              </div>
+              <div class="timeline-item">
+                <p style="font-size:13px;color:var(--text);"><strong>Seleccionar artículos</strong> — Los específicos que sustentan</p>
+              </div>
+              <div class="timeline-item">
+                <p style="font-size:13px;color:var(--text);"><strong>Analizar y relacionar</strong> — Texto narrativo, no listas</p>
+              </div>
+              <div class="timeline-item">
+                <p style="font-size:13px;color:var(--text);"><strong>Jerarquía normativa</strong> — Constitución → Leyes → Decretos</p>
+              </div>
+              <div class="timeline-item">
+                <p style="font-size:13px;color:var(--text);"><strong>Contextualizar</strong> — Relevancia de la norma</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 21: DIAGNÓSTICO DE ESTRUCTURA ==================== -->
+  <div class="slide" data-slide="20" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">04</div>
+      <div class="animate-in"><span class="badge badge-gold">Estructura — Diagnóstico</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Diagnóstico de la Estructura</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-3" style="margin-top:20px;">
+        <div class="card card-accent" style="padding:22px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <div class="icon-circle" style="background:rgba(212,168,83,0.12);color:var(--accent);"><i class="fas fa-map-pin"></i></div>
+            <h4 style="font-size:15px;color:var(--primary);">Situación Actual</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Describe con <strong>datos concretos y verificables</strong> cómo está la situación hoy. Usa encuestas, entrevistas, estadísticas, informes institucionales.</p>
+          <p style="font-size:12px;color:var(--terracotta);margin-top:8px;font-weight:500;"><i class="fas fa-exclamation-circle" style="margin-right:4px;"></i>Evita generalidades.</p>
+        </div>
+        <div class="card card-primary" style="padding:22px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <div class="icon-circle" style="background:rgba(26,60,52,0.1);color:var(--primary);"><i class="fas fa-globe"></i></div>
+            <h4 style="font-size:15px;color:var(--primary);">Análisis del Entorno</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Analiza el contexto <strong>externo e interno</strong>. Usa herramientas como FODA, PEST o análisis de actores.</p>
+        </div>
+        <div class="card card-terracotta" style="padding:22px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <div class="icon-circle" style="background:rgba(196,93,62,0.1);color:var(--terracotta);"><i class="fas fa-magnifying-glass"></i></div>
+            <h4 style="font-size:15px;color:var(--primary);">Identificación de Necesidades</h4>
+          </div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;">Necesidades concretas que el proyecto pretende atender. Diferencia entre <strong>primarias</strong> (urgentes) y <strong>secundarias</strong>.</p>
+        </div>
+      </div>
+      <div class="animate-in card" style="margin-top:16px;padding:14px 20px;background:rgba(196,93,62,0.05);border:1px solid rgba(196,93,62,0.12);">
+        <p style="font-size:13px;color:var(--text);"><i class="fas fa-question-circle" style="color:var(--terracotta);margin-right:8px;"></i>Preguntas clave: ¿Qué le falta a la población o institución? ¿Qué carencias o deficiencias son evidentes?</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 22: DELIMITACIÓN Y SUSTENTO ==================== -->
+  <div class="slide" data-slide="21" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">04</div>
+      <div class="animate-in"><span class="badge badge-gold">Estructura</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Delimitación y Sustento Teórico</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card card-accent" style="padding:24px;">
+          <h3 style="font-size:18px;color:var(--primary);margin-bottom:10px;">Delimitación del Problema</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-style:italic;">"Establecer los límites de la investigación en términos de espacio, tiempo, población y variables" — Hernández Sampieri</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="badge badge-gold"><i class="fas fa-map-marker-alt" style="margin-right:4px;"></i>Espacio</span>
+            <span class="badge badge-green"><i class="fas fa-calendar" style="margin-right:4px;"></i>Tiempo</span>
+            <span class="badge badge-red"><i class="fas fa-users" style="margin-right:4px;"></i>Población</span>
+            <span class="badge badge-gold"><i class="fas fa-sliders" style="margin-right:4px;"></i>Variables</span>
+          </div>
+          <div style="margin-top:14px;padding:10px 14px;background:rgba(212,168,83,0.08);border-radius:8px;">
+            <p style="font-size:13px;color:var(--text);"><i class="fas fa-check" style="color:var(--accent);margin-right:6px;"></i>Evita que sea demasiado amplio o confuso.</p>
+          </div>
+        </div>
+        <div class="card card-primary" style="padding:24px;">
+          <h3 style="font-size:18px;color:var(--primary);margin-bottom:10px;">Sustento Teórico</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-style:italic;">"Conjunto de teorías, conceptos y estudios previos que se analizan para explicar y fundamentar el problema" — Hernández Sampieri</p>
+          <ul class="styled-list" style="list-style:none;">
+            <li><strong>Respaldar</strong> científicamente la investigación</li>
+            <li><strong>Orientar</strong> el estudio</li>
+            <li>Dar <strong>validez y coherencia</strong> al trabajo</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 23: DISEÑO DE PROYECTO ==================== -->
+  <div class="slide" data-slide="22" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">05</div>
+      <div class="animate-in"><span class="badge badge-red">Sección 5 — Diseño del Proyecto</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Diseño de Proyecto</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in" style="margin-top:16px;">
+        <div class="card" style="padding:22px 28px;margin-bottom:16px;">
+          <p style="font-size:15px;color:var(--text);line-height:1.7;">Es la <strong>planificación estratégica</strong> que guía la ejecución. Es el <em>"cómo"</em> lograrás los objetivos planteados. Detalla la estructura lógica y operativa, asegurando coherencia, rigor y viabilidad.</p>
+        </div>
+      </div>
+      <div class="animate-in cols-4" style="margin-top:4px;">
+        <div class="card" style="text-align:center;padding:18px 12px;border-top:3px solid var(--terracotta);">
+          <i class="fas fa-route" style="font-size:22px;color:var(--terracotta);margin-bottom:10px;"></i>
+          <h4 style="font-size:13px;color:var(--primary);margin-bottom:4px;">Mapa de ruta</h4>
+          <p style="font-size:12px;color:var(--muted);">Organiza el trabajo paso a paso</p>
+        </div>
+        <div class="card" style="text-align:center;padding:18px 12px;border-top:3px solid var(--accent);">
+          <i class="fas fa-bullseye" style="font-size:22px;color:var(--accent);margin-bottom:10px;"></i>
+          <h4 style="font-size:13px;color:var(--primary);margin-bottom:4px;">Enfoque general</h4>
+          <p style="font-size:12px;color:var(--muted);">Define la estrategia</p>
+        </div>
+        <div class="card" style="text-align:center;padding:18px 12px;border-top:3px solid var(--primary);">
+          <i class="fas fa-database" style="font-size:22px;color:var(--primary);margin-bottom:10px;"></i>
+          <h4 style="font-size:13px;color:var(--primary);margin-bottom:4px;">Datos</h4>
+          <p style="font-size:12px;color:var(--muted);">Recolección y análisis</p>
+        </div>
+        <div class="card" style="text-align:center;padding:18px 12px;border-top:3px solid #2d8a56;">
+          <i class="fas fa-check-double" style="font-size:22px;color:#2d8a56;margin-bottom:10px;"></i>
+          <h4 style="font-size:13px;color:var(--primary);margin-bottom:4px;">Resultados</h4>
+          <p style="font-size:12px;color:var(--muted);">Eficientes y efectivos</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 24: METODOLOGÍA ==================== -->
+  <div class="slide" data-slide="23" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">05</div>
+      <div class="animate-in"><span class="badge badge-red">Diseño — Metodología</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Metodología</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card" style="padding:24px;">
+          <h4 style="font-size:16px;color:var(--primary);margin-bottom:10px;"><i class="fas fa-bone" style="color:var(--terracotta);margin-right:8px;"></i>¿Qué es?</h4>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;">La <strong>espina dorsal</strong> del proyecto. Es el enfoque sistemático y la estrategia general para lograr los objetivos. Va más allá de listar pasos: implica <strong>justificar las decisiones</strong> sobre cómo se abordará el problema.</p>
+        </div>
+        <div class="card" style="padding:24px;">
+          <h4 style="font-size:16px;color:var(--primary);margin-bottom:10px;"><i class="fas fa-compass-drafting" style="color:var(--primary-light);margin-right:8px;"></i>¿Cómo elegirla?</h4>
+          <p style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:14px;">Proceso reflexivo fundamentado en tres pilares:</p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(196,93,62,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:13px;font-weight:700;color:var(--terracotta);">1</span></div>
+              <span style="font-size:13px;color:var(--text);">Problema de investigación</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(212,168,83,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:13px;font-weight:700;color:var(--accent);">2</span></div>
+              <span style="font-size:13px;color:var(--text);">Objetivos del proyecto</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(26,60,52,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:13px;font-weight:700;color:var(--primary);">3</span></div>
+              <span style="font-size:13px;color:var(--text);">Tipo de conocimiento a generar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 25: ENFOQUES ==================== -->
+  <div class="slide" data-slide="24" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">05</div>
+      <div class="animate-in"><span class="badge badge-red">Diseño — Enfoques de Investigación</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Tipos de Enfoque</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-3" style="margin-top:20px;">
+        <div class="enfoque-card enfoque-cualitativo">
+          <h3 style="font-size:18px;color:var(--terracotta);margin-bottom:12px;">Cualitativo</h3>
+          <p style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:12px;"><strong>Objetivo:</strong> Explorar, comprender y describir la experiencia humana y procesos sociales.</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:6px;"><strong>Métodos:</strong> Entrevistas en profundidad, grupos focales, observación participante.</p>
+          <p style="font-size:12px;color:var(--muted);"><strong>Datos:</strong> Palabras, imágenes, narrativas. Muestra pequeña enfocada en profundidad.</p>
+        </div>
+        <div class="enfoque-card enfoque-cuantitativo">
+          <h3 style="font-size:18px;color:var(--primary);margin-bottom:12px;">Cuantitativo</h3>
+          <p style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:12px;"><strong>Objetivo:</strong> Medir, cuantificar y establecer relaciones causales o correlacionales.</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:6px;"><strong>Métodos:</strong> Encuestas estructuradas, experimentos, análisis estadístico.</p>
+          <p style="font-size:12px;color:var(--muted);"><strong>Datos:</strong> Numéricos. Muestra representativa para generalizar.</p>
+        </div>
+        <div class="enfoque-card enfoque-mixto">
+          <h3 style="font-size:18px;color:#8a6d2b;margin-bottom:12px;">Mixto</h3>
+          <p style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:12px;"><strong>Objetivo:</strong> Combinar ambos enfoques para complementar información.</p>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:6px;"><strong>Ventaja:</strong> Valida resultados desde múltiples perspectivas.</p>
+          <p style="font-size:12px;color:var(--muted);"><strong>Resultado:</strong> Visión más completa del fenómeno investigado.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 26: CONCLUSIONES Y RECOMENDACIONES ==================== -->
+  <div class="slide" data-slide="25" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">06</div>
+      <div class="animate-in"><span class="badge badge-gold">Sección 6 — Cierre</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Conclusiones y Recomendaciones</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div>
+          <div class="card card-accent" style="padding:20px;margin-bottom:14px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:8px;">Conclusión General</h4>
+            <ul class="styled-list" style="list-style:none;">
+              <li>Responde al <strong>objetivo general</strong></li>
+              <li>Clara, concisa y fundamentada</li>
+              <li>Síntesis reflexiva (sin datos numéricos)</li>
+            </ul>
+          </div>
+          <div class="card card-primary" style="padding:20px;">
+            <h4 style="font-size:15px;color:var(--primary);margin-bottom:8px;">Conclusiones Específicas</h4>
+            <ul class="styled-list" style="list-style:none;">
+              <li>Una por cada <strong>objetivo específico</strong></li>
+              <li>Basada en los resultados</li>
+              <li>Redactada en pasado, 1 párrafo cada una</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card card-terracotta" style="padding:22px;">
+          <h4 style="font-size:15px;color:var(--primary);margin-bottom:12px;">Recomendaciones</h4>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Acciones concretas y viables. Mínimo 4 a 6.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fas fa-building" style="color:var(--terracotta);"></i>
+              <span style="font-size:13px;color:var(--text);">A la <strong>institución</strong> (sostener/ampliar resultados)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fas fa-user-graduate" style="color:var(--primary-light);"></i>
+              <span style="font-size:13px;color:var(--text);">A <strong>futuros investigadores</strong> (aspectos por investigar)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fas fa-landmark" style="color:var(--accent);"></i>
+              <span style="font-size:13px;color:var(--text);">A <strong>autoridades</strong> (cambios de política o práctica)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 27: BIBLIOGRAFÍA Y ANEXOS ==================== -->
+  <div class="slide" data-slide="26" style="background:var(--bg);">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner" style="position:relative;">
+      <div class="section-number">06</div>
+      <div class="animate-in"><span class="badge badge-gold">Sección 6</span></div>
+      <h2 class="animate-in" style="font-size:32px;font-weight:700;color:var(--primary);margin:8px 0 4px;">Bibliografía y Anexos</h2>
+      <div class="animate-in divider"></div>
+      <div class="animate-in cols-2" style="margin-top:20px;">
+        <div class="card" style="padding:22px;">
+          <h4 style="font-size:16px;color:var(--primary);margin-bottom:12px;"><i class="fas fa-book" style="color:var(--accent);margin-right:8px;"></i>Bibliografía</h4>
+          <ul class="styled-list" style="list-style:none;">
+            <li>Fuentes citadas en el documento</li>
+            <li>Ordenadas <strong>alfabéticamente</strong> por apellido</li>
+            <li>Formato consistente: <strong>APA 7ma edición</strong> o ISO 690</li>
+            <li>Incluir todas las referencias consultadas</li>
+          </ul>
+          <div style="margin-top:14px;padding:10px 14px;background:rgba(212,168,83,0.08);border-radius:8px;">
+            <p style="font-size:12px;color:var(--text);font-style:italic;">Tamayo y Tamayo, M. (2003). El proceso de la investigación científica (4.ª ed.). México: Limusa.</p>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="padding:22px;margin-bottom:14px;">
+            <h4 style="font-size:16px;color:var(--primary);margin-bottom:12px;"><i class="fas fa-paperclip" style="color:var(--primary-light);margin-right:8px;"></i>Anexos — Instrumentos</h4>
+            <ul class="styled-list" style="list-style:none;">
+              <li>Cuestionarios, guías de entrevista</li>
+              <li>Fichas de observación, listas de cotejo</li>
+              <li>Rúbricas (numerados: Anexo 1, Anexo 2...)</li>
+            </ul>
+          </div>
+          <div class="card" style="padding:22px;">
+            <h4 style="font-size:16px;color:var(--primary);margin-bottom:12px;"><i class="fas fa-image" style="color:var(--terracotta);margin-right:8px;"></i>Anexos — Evidencias</h4>
+            <ul class="styled-list" style="list-style:none;">
+              <li>Fotografías, actas, certificados</li>
+              <li>Oficios de autorización</li>
+              <li>Material complementario (glosarios, planos)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DIAPOSITIVA 28: CIERRE ==================== -->
+  <div class="slide slide-end" data-slide="27">
+    <div class="bg-pattern"></div>
+    <div class="slide-inner text-center" style="color:var(--text-light);">
+      <div class="animate-in float-anim" style="margin-bottom:24px;">
+        <div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#b8912e);display:inline-flex;align-items:center;justify-content:center;animation:pulse-glow 3s ease infinite;">
+          <i class="fas fa-graduation-cap" style="font-size:40px;color:var(--primary);"></i>
+        </div>
+      </div>
+      <h1 class="animate-in" style="font-size:clamp(36px,5vw,52px);font-weight:800;margin-bottom:12px;">Gracias</h1>
+      <div class="animate-in" style="width:60px;height:3px;background:var(--accent);margin:0 auto 20px;border-radius:2px;"></div>
+      <p class="animate-in" style="font-size:18px;opacity:0.8;margin-bottom:8px;">Proyecto de Grado</p>
+      <p class="animate-in" style="font-size:15px;opacity:0.6;margin-bottom:24px;">Carrera de Educación Parvularia — UPEA</p>
+      <div class="animate-in" style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;opacity:0.5;font-size:14px;">
+          <i class="fas fa-users"></i> 10 integrantes
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;opacity:0.5;font-size:14px;">
+          <i class="fas fa-chalkboard-user"></i> Lic. Grover Jiménez Sánchez
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;opacity:0.5;font-size:14px;">
+          <i class="fas fa-calendar"></i> 2026
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ========== SISTEMA DE NAVEGACIÓN DE DIAPOSITIVAS ==========
+  const slides = document.querySelectorAll('.slide');
+  const totalSlides = slides.length;
+  let currentSlide = 0;
+  let isTransitioning = false;
+
+  // Crear mini mapa de puntos
+  const slideMap = document.getElementById('slideMap');
+  for (let i = 0; i < totalSlides; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'slide-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', `Ir a diapositiva ${i + 1}`);
+    dot.addEventListener('click', () => goToSlide(i));
+    slideMap.appendChild(dot);
+  }
+
+  const dots = document.querySelectorAll('.slide-dot');
+
+  // Actualizar la interfaz según la diapositiva actual
+  function updateUI() {
+    // Barra de progreso
+    const progress = ((currentSlide + 1) / totalSlides) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+
+    // Contador
+    const num = String(currentSlide + 1).padStart(2, '0');
+    const total = String(totalSlides).padStart(2, '0');
+    document.getElementById('slideCounter').textContent = `${num} / ${total}`;
+
+    // Dots
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === currentSlide);
+    });
+  }
+
+  // Navegar a una diapositiva específica
+  function goToSlide(index) {
+    if (isTransitioning || index === currentSlide || index < 0 || index >= totalSlides) return;
+    isTransitioning = true;
+
+    const direction = index > currentSlide ? 1 : -1;
+    const currentEl = slides[currentSlide];
+    const nextEl = slides[index];
+
+    // Salida de la diapositiva actual
+    currentEl.classList.remove('active');
+    currentEl.classList.add(direction > 0 ? 'exit-left' : '');
+    if (direction < 0) {
+      currentEl.style.transform = 'translateX(80px)';
+      currentEl.style.opacity = '0';
+    }
+
+    // Preparar la siguiente diapositiva
+    nextEl.style.transition = 'none';
+    nextEl.style.transform = direction > 0 ? 'translateX(80px)' : 'translateX(-80px)';
+    nextEl.style.opacity = '0';
+
+    // Forzar reflow
+    void nextEl.offsetWidth;
+
+    // Animar entrada
+    nextEl.style.transition = '';
+    nextEl.classList.add('active');
+    nextEl.style.transform = '';
+    nextEl.style.opacity = '';
+
+    currentSlide = index;
+    updateUI();
+
+    setTimeout(() => {
+      currentEl.classList.remove('exit-left');
+      currentEl.style.transform = '';
+      currentEl.style.opacity = '';
+      isTransitioning = false;
+    }, 600);
+  }
+
+  // Cambiar diapositiva con dirección
+  function changeSlide(direction) {
+    const nextIndex = currentSlide + direction;
+    goToSlide(nextIndex);
+  }
+
+  // Navegación por teclado
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault();
+      changeSlide(1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      changeSlide(-1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      goToSlide(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      goToSlide(totalSlides - 1);
+    }
+  });
+
+  // Soporte táctil (swipe)
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  document.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 60) {
+      changeSlide(diff > 0 ? 1 : -1);
+    }
+  }, { passive: true });
+
+  // Inicializar
+  slides[0].classList.add('active');
+  updateUI();
+</script>
+
+</body>
+</html>
